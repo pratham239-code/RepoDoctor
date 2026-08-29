@@ -18,6 +18,9 @@ export const IMPORTANT_FILES = [
   'Dockerfile'
 ];
 
+// Named configuration constant for maximum size of manifests (e.g. package.json)
+export const MAX_MANIFEST_SIZE_BYTES = 1024 * 1024; // 1 MB
+
 /**
  * Traverses a repository directory recursively to collect filesystem stats, counts, and flags.
  * 
@@ -30,31 +33,59 @@ export function traverseRepo(rootDir) {
   let totalSizeOctets = 0;
   const entries = [];
   const configs = [];
+  const scanErrors = [];
 
   const importantFileLower = IMPORTANT_FILES.map(f => f.toLowerCase());
   const importantFileMap = Object.fromEntries(
     IMPORTANT_FILES.map(f => [f.toLowerCase(), f])
   );
 
-  function walk(currentDir) {
-    let items;
-    try {
-      items = fs.readdirSync(currentDir);
-    } catch {
-      // If a folder itself is inaccessible, skip recursive walk
-      return;
+  const stack = [
+    {
+      dir: rootDir,
+      items: null,
+      index: 0
+    }
+  ];
+
+  while (stack.length > 0) {
+    const frame = stack[stack.length - 1];
+
+    if (frame.items === null) {
+      try {
+        frame.items = fs.readdirSync(frame.dir);
+      } catch (err) {
+        const relativePath = path.relative(rootDir, frame.dir);
+        const posixPath = relativePath.split(path.sep).join('/');
+        scanErrors.push({
+          type: 'access-denied',
+          path: posixPath,
+          code: err.code || 'UNKNOWN',
+          message: err.message
+        });
+        stack.pop();
+        continue;
+      }
     }
 
-    for (const item of items) {
-      const fullPath = path.join(currentDir, item);
+    if (frame.index < frame.items.length) {
+      const item = frame.items[frame.index];
+      frame.index++;
+
+      const fullPath = path.join(frame.dir, item);
       const relativePath = path.relative(rootDir, fullPath);
       const posixPath = relativePath.split(path.sep).join('/');
 
       let lstat;
       try {
         lstat = fs.lstatSync(fullPath);
-      } catch {
-        // Skip files that generate errors on access (broken symlinks, access errors)
+      } catch (err) {
+        scanErrors.push({
+          type: 'lstat-failed',
+          path: posixPath,
+          code: err.code || 'UNKNOWN',
+          message: err.message
+        });
         continue;
       }
 
@@ -85,7 +116,11 @@ export function traverseRepo(rootDir) {
           type: 'directory'
         });
 
-        walk(fullPath);
+        stack.push({
+          dir: fullPath,
+          items: null,
+          index: 0
+        });
       } else if (lstat.isFile()) {
         totalCount++;
         totalSizeOctets += lstat.size;
@@ -106,10 +141,10 @@ export function traverseRepo(rootDir) {
           }
         }
       }
+    } else {
+      stack.pop();
     }
   }
-
-  walk(rootDir);
 
   // Calculate helper binary flags for standard items found at root
   const rootFiles = entries.filter(e => !e.path.includes('/'));
@@ -127,6 +162,7 @@ export function traverseRepo(rootDir) {
     hasReadme,
     hasGitignore,
     configs: Array.from(new Set(configs)).sort(),
-    entries
+    entries,
+    scanErrors
   };
 }

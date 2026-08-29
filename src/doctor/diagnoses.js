@@ -2,6 +2,11 @@
  * Deterministic mapping rules for each finding type.
  */
 export const diagnosisRules = {
+  'scan-errors': (finding) => ({
+    problem: 'Some files or directories could not be read during the repository scan.',
+    why: 'Inaccessible paths (due to permissions, lockups, or broken links) prevent RepoDoctor from analyzing the complete state of the repository.',
+    evidence: `${finding.evidence?.count ?? 0} path(s) failed access checks: ${(finding.evidence?.paths || []).join(', ')}`
+  }),
   'empty-repository': (finding) => ({
     problem: 'The repository contains no files and no subdirectories.',
     why: 'An empty repository does not contain any code, configuration, or documentation to run, build, or understand.',
