@@ -4,6 +4,8 @@ import { PathNotFoundError } from './errors.js';
 import { ExitCodes } from './exit_codes.js';
 import { scanRepo } from '../scanner/index.js';
 import { analyze } from '../analyzer/index.js';
+import { doctor } from '../doctor/index.js';
+import { formatResult, formatJson } from '../doctor/formatter.js';
 
 /**
  * Main command router/dispatcher. Resolves the target path, verifies its
@@ -78,14 +80,25 @@ function handleCheck(resolvedPath, options) {
 }
 
 /**
- * Handles the 'doctor' command stub.
+ * Handles the 'doctor' command.
+ * Runs the full scan → analyze → doctor pipeline and outputs a formatted report.
  */
 function handleDoctor(resolvedPath, options) {
-  console.log(`Routed to 'doctor' command for path: ${resolvedPath}`);
   if (options.verbose) {
-    console.log('[verbose] Doctor mode running in verbose details.');
+    console.log(`[verbose] Doctor mode running for path: ${resolvedPath}`);
   }
-  return ExitCodes.SUCCESS;
+
+  const snapshot = scanRepo(resolvedPath, options);
+  const findings = analyze(snapshot);
+  const result = doctor(findings, snapshot);
+
+  if (options.json) {
+    console.log(formatJson(result));
+  } else {
+    console.log(formatResult(result));
+  }
+
+  return result.summary.total > 0 ? ExitCodes.FINDINGS : ExitCodes.SUCCESS;
 }
 
 /**

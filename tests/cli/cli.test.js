@@ -3,6 +3,8 @@ import assert from 'node:assert';
 import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import fs from 'node:fs';
+import os from 'node:os';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const mainScript = path.resolve(__dirname, '../../src/main.js');
@@ -77,10 +79,13 @@ test('CLI - check command on current directory', async () => {
   assert.strictEqual(result.stderr, '');
 });
 
-test('CLI - doctor command on current directory', async () => {
+test('CLI - doctor command on current directory exits with FINDINGS (1) due to repo state', async () => {
+  // The RepoDoctor repo itself always has uncommitted changes during development,
+  // so doctor will detect at least one finding and exit 1.
   const result = await runCli(['doctor', '.']);
-  assert.strictEqual(result.code, 0);
-  assert.ok(result.stdout.includes("Routed to 'doctor' command"));
+  assert.strictEqual(result.code, 1);
+  assert.ok(result.stdout.includes('RepoDoctor'));
+  assert.ok(result.stdout.includes('Findings'));
   assert.strictEqual(result.stderr, '');
 });
 
@@ -111,4 +116,40 @@ test('CLI - verbose flag logs verbose output and stack trace on error', async ()
   assert.ok(result.stdout.includes('[verbose] Target path resolved to:'));
   assert.ok(result.stderr.includes('Error: The specified path does not exist: ./non_existent_folder_abc'));
   assert.ok(result.stderr.includes('--- Stack Trace ---'));
+});
+
+test('CLI Phase 4 - doctor on clean directory exits SUCCESS (0) and shows healthy message', async () => {
+  // Create a minimal clean directory with no findings
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'repodoctor-clean-'));
+  try {
+    // Write a README, LICENSE, package.json with a JS source file
+    fs.writeFileSync(path.join(tmpDir, 'README.md'), '# Test Project\n');
+    fs.writeFileSync(path.join(tmpDir, 'LICENSE'), 'MIT License\n');
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({ name: 'clean-test', version: '1.0.0' }));
+    fs.writeFileSync(path.join(tmpDir, 'index.js'), 'console.log("hello");\n');
+    // No .git dir → scanner won't check uncommitted-changes or missing-gitignore
+    const result = await runCli(['doctor', tmpDir]);
+    assert.strictEqual(result.code, 0, `Expected exit 0, got ${result.code}. stdout: ${result.stdout}`);
+    assert.ok(result.stdout.includes('No issues detected'), `Expected 'No issues detected'. Got: ${result.stdout}`);
+    assert.strictEqual(result.stderr, '');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('CLI Phase 4 - doctor formatted output contains Why and Recommendation sections', async () => {
+  // Directory with a missing README to trigger at least one finding
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'repodoctor-findings-'));
+  try {
+    // Only a package.json and JS file — no README, no LICENSE
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({ name: 'partial-test', version: '1.0.0' }));
+    fs.writeFileSync(path.join(tmpDir, 'index.js'), 'console.log("hello");\n');
+    const result = await runCli(['doctor', tmpDir]);
+    assert.strictEqual(result.code, 1, `Expected exit 1 (findings). Got: ${result.code}. stdout: ${result.stdout}`);
+    assert.ok(result.stdout.includes('Why:'), `Expected 'Why:' section. Got: ${result.stdout}`);
+    assert.ok(result.stdout.includes('Recommendation:'), `Expected 'Recommendation:' section. Got: ${result.stdout}`);
+    assert.strictEqual(result.stderr, '');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
