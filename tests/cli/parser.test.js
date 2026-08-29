@@ -5,7 +5,7 @@ import { UsageError } from '../../src/cli/errors.js';
 
 test('Parser - empty arguments', () => {
   const result = parseArgs([]);
-  assert.deepStrictEqual(result.options, { help: false, version: false, verbose: false });
+  assert.deepStrictEqual(result.options, { help: false, version: false, verbose: false, json: false });
   assert.strictEqual(result.command, null);
   assert.strictEqual(result.path, null);
 });
@@ -108,4 +108,21 @@ test('Parser - unexpected extra positional throws UsageError', () => {
   assert.throws(() => {
     parseArgs(['scan', 'path1', 'path2']);
   }, UsageError);
+});
+
+test('Parser - json option', () => {
+  const result = parseArgs(['--json']);
+  assert.strictEqual(result.options.json, true);
+});
+
+test('Parser - json short option', () => {
+  const result = parseArgs(['-j']);
+  assert.strictEqual(result.options.json, true);
+});
+
+test('Parser - json and other options combined', () => {
+  const result = parseArgs(['-jh', '--verbose']);
+  assert.strictEqual(result.options.json, true);
+  assert.strictEqual(result.options.help, true);
+  assert.strictEqual(result.options.verbose, true);
 });

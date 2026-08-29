@@ -37,6 +37,7 @@ export function parseArgs(args) {
     help: false,
     version: false,
     verbose: false,
+    json: false,
   };
   
   let command = null;
@@ -54,6 +55,8 @@ export function parseArgs(args) {
         options.version = true;
       } else if (arg === '--verbose') {
         options.verbose = true;
+      } else if (arg === '--json') {
+        options.json = true;
       } else {
         throw new UsageError(`Unknown option: ${arg}`);
       }
@@ -65,6 +68,8 @@ export function parseArgs(args) {
           options.help = true;
         } else if (char === 'v') {
           options.version = true;
+        } else if (char === 'j') {
+          options.json = true;
         } else {
           throw new UsageError(`Unknown option: -${char}`);
         }

@@ -19,11 +19,12 @@ Available Options:
   -h, --help     Show this help information and exit.
   -v, --version  Show the application version and exit.
   --verbose      Enable verbose output logging.
+  -j, --json     Output findings in JSON format (doctor command only).
 
 Examples:
   repodoctor .
   repodoctor scan /path/to/project
   repodoctor check --verbose
-  repodoctor doctor .
+  repodoctor doctor --json .
 `;
 }
