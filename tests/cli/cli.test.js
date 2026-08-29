@@ -70,7 +70,9 @@ test('CLI - scan command on current directory', async () => {
 
 test('CLI - check command on current directory', async () => {
   const result = await runCli(['check', '.']);
-  assert.strictEqual(result.code, 0);
+  // In Phase 3, check command runs the analyzer and exits with 1 (FINDINGS) because the
+  // current repo has uncommitted changes and no .gitignore file.
+  assert.strictEqual(result.code, 1);
   assert.ok(result.stdout.includes("Routed to 'check' command"));
   assert.strictEqual(result.stderr, '');
 });

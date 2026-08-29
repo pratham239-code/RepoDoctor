@@ -3,6 +3,7 @@ import path from 'node:path';
 import { PathNotFoundError } from './errors.js';
 import { ExitCodes } from './exit_codes.js';
 import { scanRepo } from '../scanner/index.js';
+import { analyze } from '../analyzer/index.js';
 
 /**
  * Main command router/dispatcher. Resolves the target path, verifies its
@@ -60,14 +61,20 @@ function handleScan(resolvedPath, options) {
 }
 
 /**
- * Handles the 'check' command stub.
+ * Handles the 'check' command.
  */
 function handleCheck(resolvedPath, options) {
   console.log(`Routed to 'check' command for path: ${resolvedPath}`);
   if (options.verbose) {
     console.log('[verbose] Check mode running in verbose details.');
   }
-  return ExitCodes.SUCCESS;
+
+  const snapshot = scanRepo(resolvedPath, options);
+  const findings = analyze(snapshot);
+
+  console.log(JSON.stringify(findings, null, 2));
+
+  return findings.length > 0 ? ExitCodes.FINDINGS : ExitCodes.SUCCESS;
 }
 
 /**
