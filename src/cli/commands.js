@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { PathNotFoundError } from './errors.js';
 import { ExitCodes } from './exit_codes.js';
+import { scanRepo } from '../scanner/index.js';
 
 /**
  * Main command router/dispatcher. Resolves the target path, verifies its
@@ -44,13 +45,17 @@ export function routeCommand(command, targetPath, options) {
 }
 
 /**
- * Handles the 'scan' command stub.
+ * Handles the 'scan' command.
  */
 function handleScan(resolvedPath, options) {
   console.log(`Routed to 'scan' command for path: ${resolvedPath}`);
   if (options.verbose) {
     console.log('[verbose] Scan mode running in verbose details.');
   }
+
+  const snapshot = scanRepo(resolvedPath, options);
+  console.log(JSON.stringify(snapshot, null, 2));
+
   return ExitCodes.SUCCESS;
 }
 
