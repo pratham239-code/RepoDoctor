@@ -1,31 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { execFile } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import os from 'node:os';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const mainScript = path.resolve(__dirname, '../../src/main.js');
-
-/**
- * Runs the CLI inside a Node.js child process and returns exit code, stdout, and stderr.
- * 
- * @param {string[]} args CLI arguments
- * @returns {Promise<{ code: number, stdout: string, stderr: string }>}
- */
-function runCli(args = []) {
-  return new Promise((resolve) => {
-    execFile(process.execPath, [mainScript, ...args], (error, stdout, stderr) => {
-      resolve({
-        code: error ? (error.code ?? 1) : 0,
-        stdout: stdout.trim(),
-        stderr: stderr.trim(),
-      });
-    });
-  });
-}
+import { runCli } from '../helpers/test_utils.js';
 
 test('CLI - --help prints help text and exits 0', async () => {
   const result = await runCli(['--help']);
@@ -57,17 +35,31 @@ test('CLI - -v prints version and exits 0', async () => {
 });
 
 test('CLI - default path invocation on current directory', async () => {
-  const result = await runCli(['.']);
-  assert.strictEqual(result.code, 0);
-  assert.ok(result.stdout.includes('Routed to default command'));
-  assert.strictEqual(result.stderr, '');
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'repodoctor-default-'));
+  try {
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({ name: 'default-test', version: '1.0.0' }));
+    fs.writeFileSync(path.join(tmpDir, 'index.js'), 'console.log("hello");\n');
+    const result = await runCli([tmpDir]);
+    assert.strictEqual(result.code, 0);
+    assert.ok(result.stdout.includes('Routed to default command'));
+    assert.strictEqual(result.stderr, '');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
 
 test('CLI - scan command on current directory', async () => {
-  const result = await runCli(['scan', '.']);
-  assert.strictEqual(result.code, 0);
-  assert.ok(result.stdout.includes("Routed to 'scan' command"));
-  assert.strictEqual(result.stderr, '');
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'repodoctor-scan-'));
+  try {
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({ name: 'scan-test', version: '1.0.0' }));
+    fs.writeFileSync(path.join(tmpDir, 'index.js'), 'console.log("hello");\n');
+    const result = await runCli(['scan', tmpDir]);
+    assert.strictEqual(result.code, 0);
+    assert.ok(result.stdout.includes("Routed to 'scan' command"));
+    assert.strictEqual(result.stderr, '');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
 
 test('CLI - check command exits with FINDINGS (1) on repo missing documentation', async () => {

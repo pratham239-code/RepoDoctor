@@ -1,32 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { execFile } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import os from 'node:os';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const cliEntry = path.resolve(__dirname, '../../src/main.js');
-
-/**
- * Runs the CLI inside a Node.js child process and returns exit code, stdout, and stderr.
- * 
- * @param {string[]} args CLI arguments
- * @returns {Promise<{ code: number, stdout: string, stderr: string }>}
- */
-function runCli(args = []) {
-  return new Promise((resolve) => {
-    execFile(process.execPath, [cliEntry, ...args], (error, stdout, stderr) => {
-      resolve({
-        code: error ? (error.code ?? 1) : 0,
-        stdout: stdout.trim(),
-        stderr: stderr.trim(),
-      });
-    });
-  });
-}
+import { runCli } from '../helpers/test_utils.js';
 
 function withTempDir(testFn) {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'repodoctor-integration-'));
