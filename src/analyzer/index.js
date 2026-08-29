@@ -20,6 +20,24 @@ export function analyze(snapshot) {
   const deps = snapshot.dependencies || {};
 
   // ----------------------------------------------------
+  // 0. Filesystem: Scan Errors Check
+  // ----------------------------------------------------
+  if (Array.isArray(files.scanErrors) && files.scanErrors.length > 0) {
+    findings.push(createFinding({
+      id: 'scan-errors',
+      category: Categories.STRUCTURE,
+      severity: Severities.WARNING,
+      title: 'Filesystem access errors during scan',
+      description: `${files.scanErrors.length} path(s) could not be read due to permission or access errors.`,
+      evidence: {
+        count: files.scanErrors.length,
+        paths: files.scanErrors.slice(0, 5).map(e => e.path)
+      },
+      location: null
+    }));
+  }
+
+  // ----------------------------------------------------
   // 1. Structure: Empty Repository Check
   // ----------------------------------------------------
   const totalCount = typeof files.totalCount === 'number' ? files.totalCount : 0;

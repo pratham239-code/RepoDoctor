@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { traverseRepo } from './fs_utils.js';
+import { traverseRepo, MAX_MANIFEST_SIZE_BYTES } from './fs_utils.js';
 import { getGitFacts } from './git_utils.js';
 import { CLIError } from '../cli/errors.js';
 import { ExitCodes } from '../cli/exit_codes.js';
@@ -56,6 +56,11 @@ export function scanRepo(resolvedPath, options = {}) {
   if (fsFacts.hasPackageJson) {
     const pkgPath = path.join(resolvedPath, 'package.json');
     try {
+      const pkgStat = fs.statSync(pkgPath);
+      if (pkgStat.size > MAX_MANIFEST_SIZE_BYTES) {
+        throw new Error(`File size validation failed: package.json exceeds maximum allowed size of ${MAX_MANIFEST_SIZE_BYTES} bytes`);
+      }
+
       const rawPkg = fs.readFileSync(pkgPath, 'utf8');
       const pkgData = JSON.parse(rawPkg);
 
@@ -96,7 +101,8 @@ export function scanRepo(resolvedPath, options = {}) {
       hasReadme: fsFacts.hasReadme,
       hasGitignore: fsFacts.hasGitignore,
       configs: fsFacts.configs,
-      entries: fsFacts.entries
+      entries: fsFacts.entries,
+      scanErrors: fsFacts.scanErrors
     },
     dependencies
   };

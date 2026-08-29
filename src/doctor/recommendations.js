@@ -3,6 +3,13 @@
  * Each rule takes the finding and returns an action string.
  */
 const recommendationRules = {
+  'scan-errors': (finding) => {
+    const errorPaths = finding.evidence?.paths || [];
+    const pathsStr = errorPaths.length > 0 ? ` (such as: ${errorPaths.join(', ')})` : '';
+    return 'Check the read permissions and integrity of the inaccessible paths' + pathsStr + '. ' +
+           'Ensure the user running RepoDoctor has sufficient read privileges across the target workspace.';
+  },
+
   'empty-repository': () =>
     'Initialize the repository by adding at minimum a README.md describing the project purpose and setup, ' +
     'and a LICENSE file if applicable.',
