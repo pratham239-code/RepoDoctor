@@ -5,7 +5,7 @@ import { UsageError } from '../../src/cli/errors.js';
 
 test('Parser - empty arguments', () => {
   const result = parseArgs([]);
-  assert.deepStrictEqual(result.options, { help: false, version: false, verbose: false, json: false });
+  assert.deepStrictEqual(result.options, { help: false, version: false, verbose: false, json: false, noColor: false });
   assert.strictEqual(result.command, null);
   assert.strictEqual(result.path, null);
 });
@@ -125,4 +125,15 @@ test('Parser - json and other options combined', () => {
   assert.strictEqual(result.options.json, true);
   assert.strictEqual(result.options.help, true);
   assert.strictEqual(result.options.verbose, true);
+});
+
+test('Parser - no-color option', () => {
+  const result = parseArgs(['--no-color']);
+  assert.strictEqual(result.options.noColor, true);
+});
+
+test('Parser - no-color option with other options', () => {
+  const result = parseArgs(['--no-color', '-j']);
+  assert.strictEqual(result.options.noColor, true);
+  assert.strictEqual(result.options.json, true);
 });

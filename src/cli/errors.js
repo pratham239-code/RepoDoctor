@@ -34,6 +34,18 @@ export class PathNotFoundError extends CLIError {
 }
 
 /**
+ * Helper to determine if ANSI escape color codes should be enabled.
+ * 
+ * @returns {boolean}
+ */
+function isColorEnabled() {
+  if (process.argv.includes('--no-color')) return false;
+  if (process.env.NO_COLOR !== undefined) return false;
+  if (process.env.FORCE_COLOR !== undefined) return true;
+  return process.stderr.isTTY;
+}
+
+/**
  * Centrally handles any CLI errors, prints clean messages to stderr,
  * and exits the process with the corresponding exit code.
  * 
@@ -42,17 +54,37 @@ export class PathNotFoundError extends CLIError {
  */
 export function handleError(error, verbose = false) {
   const exitCode = error.exitCode ?? ExitCodes.INTERNAL_ERROR;
+  const useColor = isColorEnabled();
   
+  const red = (str) => useColor ? `\x1b[31;1m${str}\x1b[0m` : str;
+  const dim = (str) => useColor ? `\x1b[90m${str}\x1b[0m` : str;
+
+  const errorPrefix = useColor ? `\x1b[31;1m✗ Error:\x1b[0m` : '✗ Error:';
+  
+  let message = error.message;
+  let hint = null;
+
+  if (error instanceof PathNotFoundError) {
+    hint = 'Please check the path and try again.';
+  } else if (error instanceof UsageError) {
+    hint = 'Run `repodoctor --help` for usage information.';
+  } else if (message && message.includes('Permission denied')) {
+    hint = 'RepoDoctor requires read access to scan this directory.';
+  }
+
   if (exitCode === ExitCodes.INTERNAL_ERROR) {
-    console.error(`Error: An unexpected internal error occurred.`);
+    console.error(`${errorPrefix} An unexpected internal error occurred.`);
     if (verbose || !error.exitCode) {
       console.error(error.stack || error);
     } else {
-      console.error(error.message);
+      console.error(message);
     }
   } else {
     // Expected CLI errors (e.g. UsageError, PathNotFoundError)
-    console.error(`Error: ${error.message}`);
+    console.error(`${errorPrefix} ${message}`);
+    if (hint) {
+      console.error(dim(`  → ${hint}`));
+    }
     if (verbose && error.stack) {
       console.error('\n--- Stack Trace ---');
       console.error(error.stack);

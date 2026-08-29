@@ -95,7 +95,7 @@ function handleDoctor(resolvedPath, options) {
   if (options.json) {
     console.log(formatJson(result));
   } else {
-    console.log(formatResult(result));
+    console.log(formatResult(result, options));
   }
 
   return result.summary.total > 0 ? ExitCodes.FINDINGS : ExitCodes.SUCCESS;
@@ -109,5 +109,16 @@ function handleDefault(resolvedPath, options) {
   if (options.verbose) {
     console.log('[verbose] Default mode running in verbose details.');
   }
+
+  const snapshot = scanRepo(resolvedPath, options);
+  const findings = analyze(snapshot);
+  const result = doctor(findings, snapshot);
+
+  if (options.json) {
+    console.log(formatJson(result));
+  } else {
+    console.log(formatResult(result, options));
+  }
+
   return ExitCodes.SUCCESS;
 }

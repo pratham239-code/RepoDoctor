@@ -38,6 +38,7 @@ export function parseArgs(args) {
     version: false,
     verbose: false,
     json: false,
+    noColor: false,
   };
   
   let command = null;
@@ -57,6 +58,8 @@ export function parseArgs(args) {
         options.verbose = true;
       } else if (arg === '--json') {
         options.json = true;
+      } else if (arg === '--no-color') {
+        options.noColor = true;
       } else {
         throw new UsageError(`Unknown option: ${arg}`);
       }

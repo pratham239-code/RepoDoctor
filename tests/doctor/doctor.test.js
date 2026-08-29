@@ -357,3 +357,70 @@ test('Doctor - doctor() does not mutate the original snapshot', () => {
   doctor([makeFinding()], snapshot);
   assert.strictEqual(snapshot.project.name, originalName);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 12. Phase 7 UX/UI formatting tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+test('Formatter - formatResult supports forced color option', () => {
+  const findings = [makeFinding({ id: 'missing-readme', severity: 'warning' })];
+  const result = doctor(findings, makeSnapshot());
+  
+  const outputColor = formatResult(result, { color: true });
+  const outputNoColor = formatResult(result, { color: false });
+  
+  // Color output should contain ANSI escape codes
+  assert.ok(outputColor.includes('\x1b[30;43;1m'));
+  assert.ok(outputColor.includes('\x1b[0m'));
+  
+  // No-color output should not contain ANSI escape codes
+  assert.ok(!outputNoColor.includes('\x1b[30;43;1m'));
+});
+
+test('Formatter - formatResult renders category summary table', () => {
+  const findings = [
+    makeFinding({ id: 'missing-readme', category: 'documentation', severity: 'warning' }),
+    makeFinding({ id: 'missing-license', category: 'documentation', severity: 'warning' }),
+    makeFinding({ id: 'uncommitted-changes', category: 'git', severity: 'info' })
+  ];
+  const result = doctor(findings, makeSnapshot());
+  const output = formatResult(result, { color: false });
+  
+  assert.ok(output.includes('Categories Summary'));
+  assert.ok(output.includes('documentation'));
+  assert.ok(output.includes('git'));
+});
+
+test('Formatter - formatResult renders duplicate dependency table', () => {
+  const findings = [
+    makeFinding({
+      id: 'duplicate-dependency',
+      category: 'dependencies',
+      severity: 'error',
+      evidence: {
+        dependency: 'lodash',
+        dependenciesVersion: '^4.17.21',
+        devDependenciesVersion: '^4.17.21'
+      }
+    })
+  ];
+  const result = doctor(findings, makeSnapshot());
+  const output = formatResult(result, { color: false });
+  
+  assert.ok(output.includes('dependencies'));
+  assert.ok(output.includes('devDependencies'));
+  assert.ok(output.includes('^4.17.21'));
+});
+
+test('Formatter - formatResult renders priority actions list', () => {
+  const findings = [
+    makeFinding({ id: 'missing-readme', severity: 'warning', title: 'Missing README' }),
+    makeFinding({ id: 'uncommitted-changes', severity: 'info', title: 'Uncommitted changes' })
+  ];
+  const result = doctor(findings, makeSnapshot());
+  const output = formatResult(result, { color: false });
+  
+  assert.ok(output.includes('Priority Actions:'));
+  assert.ok(output.includes('1. '));
+  assert.ok(output.includes('2. '));
+});

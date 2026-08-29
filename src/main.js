@@ -23,7 +23,7 @@ function main() {
     
     // If help flag is specified, print help text and exit immediately
     if (options.help) {
-      console.log(getHelpText());
+      console.log(getHelpText(options));
       process.exit(ExitCodes.SUCCESS);
     }
     
