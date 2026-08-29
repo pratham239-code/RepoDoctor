@@ -1,0 +1,12 @@
+{
+  "name": "repodoctor",
+  "version": "1.0.0",
+  "description": "Zero-dependency repository health and diagnostics CLI",
+  "type": "module",
+  "bin": {
+    "repodoctor": "./src/main.js"
+  },
+  "scripts": {
+    "test": "node --test tests/cli/parser.test.js tests/cli/cli.test.js"
+  }
+}
