@@ -70,23 +70,39 @@ test('CLI - scan command on current directory', async () => {
   assert.strictEqual(result.stderr, '');
 });
 
-test('CLI - check command on current directory', async () => {
-  const result = await runCli(['check', '.']);
-  // In Phase 3, check command runs the analyzer and exits with 1 (FINDINGS) because the
-  // current repo has uncommitted changes and no .gitignore file.
-  assert.strictEqual(result.code, 1);
-  assert.ok(result.stdout.includes("Routed to 'check' command"));
-  assert.strictEqual(result.stderr, '');
+test('CLI - check command exits with FINDINGS (1) on repo missing documentation', async () => {
+  // Use an isolated temp dir with known content so this test is deterministic
+  // regardless of the state of the host repository.
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'repodoctor-check-'));
+  try {
+    // package.json + source file only; no README, no LICENSE → 2 warnings
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({ name: 'check-test', version: '1.0.0' }));
+    fs.writeFileSync(path.join(tmpDir, 'index.js'), 'console.log("hello");\n');
+    const result = await runCli(['check', tmpDir]);
+    assert.strictEqual(result.code, 1);
+    assert.ok(result.stdout.includes("Routed to 'check' command"));
+    assert.strictEqual(result.stderr, '');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
 
-test('CLI - doctor command on current directory exits with FINDINGS (1) due to repo state', async () => {
-  // The RepoDoctor repo itself always has uncommitted changes during development,
-  // so doctor will detect at least one finding and exit 1.
-  const result = await runCli(['doctor', '.']);
-  assert.strictEqual(result.code, 1);
-  assert.ok(result.stdout.includes('RepoDoctor'));
-  assert.ok(result.stdout.includes('Findings'));
-  assert.strictEqual(result.stderr, '');
+test('CLI - doctor command exits with FINDINGS (1) on repo missing documentation', async () => {
+  // Use an isolated temp dir with known content so this test is deterministic
+  // regardless of the state of the host repository.
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'repodoctor-doctor-'));
+  try {
+    // package.json + source file only; no README, no LICENSE → 2 warnings
+    fs.writeFileSync(path.join(tmpDir, 'package.json'), JSON.stringify({ name: 'doctor-test', version: '1.0.0' }));
+    fs.writeFileSync(path.join(tmpDir, 'index.js'), 'console.log("hello");\n');
+    const result = await runCli(['doctor', tmpDir]);
+    assert.strictEqual(result.code, 1);
+    assert.ok(result.stdout.includes('doctor-test'));
+    assert.ok(result.stdout.includes('Findings'));
+    assert.strictEqual(result.stderr, '');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
 
 test('CLI - unknown command exits with USAGE_ERROR (2)', async () => {
