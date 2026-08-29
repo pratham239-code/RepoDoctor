@@ -8,6 +8,18 @@ import { doctor } from '../doctor/index.js';
 import { formatResult, formatJson } from '../doctor/formatter.js';
 
 /**
+ * Helper to print diagnostic message to stderr if JSON mode is active,
+ * or stdout if it is not. This maintains clean stdout for JSON parsers.
+ */
+function logDiagnostic(msg, options = {}) {
+  if (options.json) {
+    console.error(msg);
+  } else {
+    console.log(msg);
+  }
+}
+
+/**
  * Main command router/dispatcher. Resolves the target path, verifies its
  * existence on the filesystem, and dispatches to the appropriate command handler.
  * 
@@ -23,7 +35,7 @@ export function routeCommand(command, targetPath, options) {
   const resolvedPath = path.resolve(rawPath);
   
   if (options.verbose) {
-    console.log(`[verbose] Target path resolved to: ${resolvedPath}`);
+    logDiagnostic(`[verbose] Target path resolved to: ${resolvedPath}`, options);
   }
   
   // Validate path existence
@@ -51,9 +63,9 @@ export function routeCommand(command, targetPath, options) {
  * Handles the 'scan' command.
  */
 function handleScan(resolvedPath, options) {
-  console.log(`Routed to 'scan' command for path: ${resolvedPath}`);
+  logDiagnostic(`Routed to 'scan' command for path: ${resolvedPath}`, options);
   if (options.verbose) {
-    console.log('[verbose] Scan mode running in verbose details.');
+    logDiagnostic('[verbose] Scan mode running in verbose details.', options);
   }
 
   const snapshot = scanRepo(resolvedPath, options);
@@ -66,9 +78,9 @@ function handleScan(resolvedPath, options) {
  * Handles the 'check' command.
  */
 function handleCheck(resolvedPath, options) {
-  console.log(`Routed to 'check' command for path: ${resolvedPath}`);
+  logDiagnostic(`Routed to 'check' command for path: ${resolvedPath}`, options);
   if (options.verbose) {
-    console.log('[verbose] Check mode running in verbose details.');
+    logDiagnostic('[verbose] Check mode running in verbose details.', options);
   }
 
   const snapshot = scanRepo(resolvedPath, options);
@@ -85,7 +97,7 @@ function handleCheck(resolvedPath, options) {
  */
 function handleDoctor(resolvedPath, options) {
   if (options.verbose) {
-    console.log(`[verbose] Doctor mode running for path: ${resolvedPath}`);
+    logDiagnostic(`[verbose] Doctor mode running for path: ${resolvedPath}`, options);
   }
 
   const snapshot = scanRepo(resolvedPath, options);
@@ -105,9 +117,9 @@ function handleDoctor(resolvedPath, options) {
  * Handles default invocation (no command specified, e.g. `repodoctor .`).
  */
 function handleDefault(resolvedPath, options) {
-  console.log(`Routed to default command for path: ${resolvedPath}`);
+  logDiagnostic(`Routed to default command for path: ${resolvedPath}`, options);
   if (options.verbose) {
-    console.log('[verbose] Default mode running in verbose details.');
+    logDiagnostic('[verbose] Default mode running in verbose details.', options);
   }
 
   const snapshot = scanRepo(resolvedPath, options);

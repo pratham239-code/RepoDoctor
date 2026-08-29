@@ -7,6 +7,6 @@
     "repodoctor": "./src/main.js"
   },
   "scripts": {
-    "test": "node --test tests/cli/parser.test.js tests/cli/cli.test.js tests/cli/integration.test.js tests/scanner/scanner.test.js tests/analyzer/analyzer.test.js tests/doctor/doctor.test.js"
+    "test": "node --test tests/cli/parser.test.js tests/cli/cli.test.js tests/cli/integration.test.js tests/scanner/scanner.test.js tests/analyzer/analyzer.test.js tests/doctor/doctor.test.js tests/reports/report.test.js tests/reports/terminal.test.js tests/reports/json.test.js"
   }
 }
