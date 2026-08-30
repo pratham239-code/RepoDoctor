@@ -1,4 +1,4 @@
-# RepoDoctor
+# RepoDoctor (old readme file version will get updated later once its all done)
 
 RepoDoctor is a fast, offline, and zero-dependency repository health and diagnostics CLI utility. It scans local projects (specifically targeting Node.js environments) to analyze structure, Git configurations, dependencies, and project metadata, offering detailed diagnostic findings and recommendations to fix issues.
 
