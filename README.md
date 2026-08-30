@@ -86,29 +86,6 @@ For example, to run a direct stats checkup on a folder:
 ./repodoctor stats D:\zerodependency\RepoDoctor
 ```
 
-### 3. Global Command Invocation
-To use `repodoctor` as a global command in any directory on your computer, run:
-```bash
-npm link
-```
-Once linked, you can launch the interactive menu or run CLI commands from any folder:
-```powershell
-repodoctor
-repodoctor doctor D:\path\to\project
-```
-
-### 4. Running inside Docker Containers
-You can build and run RepoDoctor isolated inside a lightweight container:
-*   **Build the image**:
-    ```bash
-    docker build -t repodoctor .
-    ```
-*   **Run the container**:
-    ```bash
-    docker run -it -v "D:\my-web-app:/repo" repodoctor
-    ```
-    *(Type `/repo` inside the prompt to run diagnostics on your mounted directory).*
-
 ---
 
 ## Available Commands
