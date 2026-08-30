@@ -1,8 +1,39 @@
-# RepoDoctor (old readme file version will get updated later once its all done)
+# RepoDoctor
 
 RepoDoctor is a fast, offline, and zero-dependency repository health and diagnostics CLI utility. It scans local projects (specifically targeting Node.js environments) to analyze structure, Git configurations, dependencies, and project metadata, offering detailed diagnostic findings and recommendations to fix issues.
 
 Designed for simplicity, portability, and performance, RepoDoctor is written purely in Node.js using only standard library APIs, guaranteeing zero third-party runtime or development dependencies.
+
+---
+
+## Hackathon Track A Compliance
+
+RepoDoctor is custom-built to be fully compliant with **Hackathon Track A Constraints**:
+- **Zero Third-Party Dependencies**: The application does not use external libraries (e.g., `chalk`, `commander`, `lodash`, or `jest`). Both production and development modules rely exclusively on modern built-in Node.js libraries.
+- **Pure Offline Operation**: All calculations, directory traversal operations, and Git analyses run locally on the client system. No external network connections, socket integrations, or remote API calls are executed.
+- **Fast and Instant Run**: No installation (`npm install`) is required, making setup immediate, memory-safe, and secure.
+
+---
+
+## System Architecture
+
+RepoDoctor is architected around a linear diagnostics pipeline:
+
+```mermaid
+graph TD
+    A[Target Path] --> B[Scanner Module]
+    B -->|Repository Snapshot JSON| C[Analyzer Module]
+    C -->|Raw Findings JSON Array| D[Doctor Module]
+    D -->|Rich Diagnosis & Recommendations| E[Reports Layer]
+    E -->|Terminal Human-Readable Output| F[Console Output]
+    E -->|JSON Output| G[Structured JSON stdout]
+```
+
+1. **CLI Parser & Dispatcher**: Parses CLI arguments and handles commands via portable launchers.
+2. **Scanner (`src/scanner/`)**: Performs recursive directory traversal. Collects directory layout, file metrics, standard project configuration existence, Git commits, configurations, and uncommitted edits. Safe against symbolic link cycles.
+3. **Analyzer (`src/analyzer/`)**: Evaluates the scanner snapshot against built-in diagnostic rules (e.g. detecting duplicate package dependencies, missing configuration files, malformed manifest JSON).
+4. **Doctor (`src/doctor/`)**: Translates raw analyzer findings into informative diagnoses detailing severity, category, why the finding matters, and actionable Recommendations.
+5. **Reports Layer (`src/reports/`)**: Standardizes rendering using abstract report engines. Formats results into ANSI-colored terminal summaries or output-pure JSON streams.
 
 ---
 
@@ -197,8 +228,14 @@ RepoDoctor is built using strictly native modules provided by the Node.js runtim
 
 ## Development & Test Suite Instructions
 
-To run the automated test suite, execute the following command:
+### Node.js Engine Requirements
+RepoDoctor requires **Node.js Engine >= 18.0.0** to run, compile facts, and run diagnostics due to utilizing modern built-in ES modules (`import`/`export`) and native Node.js test suites.
+
+### Testing Execution Commands
+Since executing terminal script wrappers via `npm` might be blocked by default PowerShell environment security execution policies on Windows, developers can run the entire test suite directly using the native Node.js engine:
 
 ```bash
-node --test tests/cli/parser.test.js tests/cli/cli.test.js tests/cli/integration.test.js tests/scanner/scanner.test.js tests/analyzer/analyzer.test.js tests/doctor/doctor.test.js
+node --test tests/analyzer/analyzer.test.js tests/analyzer/safety.test.js tests/cli/cli.test.js tests/cli/exit_codes.test.js tests/cli/integration.test.js tests/cli/parser.test.js tests/doctor/doctor.test.js tests/reports/json.test.js tests/reports/report.test.js tests/reports/terminal.test.js tests/scanner/safety.test.js tests/scanner/scanner.test.js
 ```
+
+*(Alternatively, if script running policies allow npm executables or in simple shell environments, you may run `npm test`.)*
