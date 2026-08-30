@@ -51,6 +51,14 @@ export function routeCommand(command, targetPath, options) {
       return handleCheck(resolvedPath, options);
     case 'doctor':
       return handleDoctor(resolvedPath, options);
+    case 'stats':
+      return handleQuickStats(resolvedPath, options);
+    case 'git':
+      return handleGitAudit(resolvedPath, options);
+    case 'deps':
+      return handleDependencyList(resolvedPath, options);
+    case 'export':
+      return handleExportReport(resolvedPath, options);
     case null:
       return handleDefault(resolvedPath, options);
     default:
@@ -130,6 +138,221 @@ function handleDefault(resolvedPath, options) {
     console.log(formatJson(result));
   } else {
     console.log(formatResult(result, options));
+  }
+
+  return ExitCodes.SUCCESS;
+}
+
+/**
+ * Formats bytes to human-readable size.
+ */
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+/**
+ * Draws dependency tree lines.
+ */
+function renderDependencyTree(depsObj, prefix = '  ') {
+  const entries = Object.entries(depsObj);
+  if (entries.length === 0) {
+    console.log(`${prefix}  (none)`);
+    return;
+  }
+  entries.forEach(([name, version], index) => {
+    const isLast = index === entries.length - 1;
+    const branch = isLast ? '└── ' : '├── ';
+    console.log(`${prefix}${branch}${name}@${version}`);
+  });
+}
+
+/**
+ * Handles the 'stats' command.
+ */
+function handleQuickStats(resolvedPath, options) {
+  const snapshot = scanRepo(resolvedPath, options);
+  const useColor = !options.noColor && !process.env.NO_COLOR && (process.env.FORCE_COLOR !== undefined || process.stdout.isTTY);
+  
+  const bold = (str) => useColor ? `\x1b[1m${str}\x1b[0m` : str;
+  const cyan = (str) => useColor ? `\x1b[36m${str}\x1b[0m` : str;
+  
+  // Group extensions
+  const extCounts = {};
+  for (const entry of snapshot.files.entries) {
+    if (entry.type === 'file') {
+      const ext = entry.extension || '(no extension)';
+      extCounts[ext] = (extCounts[ext] || 0) + 1;
+    }
+  }
+
+  const sortedExts = Object.entries(extCounts).sort((a, b) => b[1] - a[1]);
+
+  if (options.json) {
+    console.log(JSON.stringify({
+      repository: snapshot.project.name,
+      totalFiles: snapshot.files.totalCount,
+      totalDirectories: snapshot.files.totalDirectoryCount,
+      totalSize: snapshot.files.totalSizeOctets,
+      extensions: extCounts
+    }, null, 2));
+    return ExitCodes.SUCCESS;
+  }
+
+  console.log(bold('\nQuick Stats'));
+  console.log(cyan('────────────────────────────────────────────────────────'));
+  console.log(`Repository:      ${bold(snapshot.project.name)}`);
+  console.log(`Total Files:     ${snapshot.files.totalCount}`);
+  console.log(`Total Folders:   ${snapshot.files.totalDirectoryCount}`);
+  console.log(`Total Size:      ${formatBytes(snapshot.files.totalSizeOctets)}`);
+  console.log(cyan('\nFile Extension Breakdown:'));
+  if (sortedExts.length === 0) {
+    console.log('  No files found.');
+  } else {
+    for (const [ext, count] of sortedExts) {
+      console.log(`  ${ext.padEnd(15)} : ${count} ${count === 1 ? 'file' : 'files'}`);
+    }
+  }
+  console.log(cyan('────────────────────────────────────────────────────────'));
+  
+  return ExitCodes.SUCCESS;
+}
+
+/**
+ * Handles the 'git' command.
+ */
+function handleGitAudit(resolvedPath, options) {
+  const snapshot = scanRepo(resolvedPath, options);
+  const git = snapshot.git || {};
+  const useColor = !options.noColor && !process.env.NO_COLOR && (process.env.FORCE_COLOR !== undefined || process.stdout.isTTY);
+  
+  const bold = (str) => useColor ? `\x1b[1m${str}\x1b[0m` : str;
+  const cyan = (str) => useColor ? `\x1b[36m${str}\x1b[0m` : str;
+  const green = (str) => useColor ? `\x1b[32m${str}\x1b[0m` : str;
+  const yellow = (str) => useColor ? `\x1b[33m${str}\x1b[0m` : str;
+  const dim = (str) => useColor ? `\x1b[90m${str}\x1b[0m` : str;
+
+  if (options.json) {
+    console.log(JSON.stringify({
+      repository: snapshot.project.name,
+      git
+    }, null, 2));
+    return ExitCodes.SUCCESS;
+  }
+
+  console.log(bold('\nGit Audit'));
+  console.log(cyan('────────────────────────────────────────────────────────'));
+  console.log(`Repository:      ${bold(snapshot.project.name)}`);
+  
+  if (!git.isRepo) {
+    console.log(`Git Status:      ${yellow('Not a Git repository (or Git is not installed)')}`);
+    console.log(cyan('────────────────────────────────────────────────────────'));
+    return ExitCodes.SUCCESS;
+  }
+
+  console.log(`Git Status:      ${green('✓ Active Git Repository')}`);
+  console.log(`Active Branch:   ${bold(git.currentBranch || 'N/A')}`);
+  console.log(`Uncommitted:     ${git.hasUncommittedChanges ? yellow('Yes (Local changes exist)') : green('No (Clean working tree)')}`);
+  
+  if (git.latestCommit) {
+    console.log(bold('\nLatest Commit:'));
+    console.log(`  Hash:          ${git.latestCommit.hash || 'N/A'}`);
+    console.log(`  Author:        ${git.latestCommit.author || 'N/A'}`);
+    console.log(`  Date:          ${git.latestCommit.date || 'N/A'}`);
+    console.log(`  Message:       ${dim(git.latestCommit.message || 'N/A')}`);
+  } else {
+    console.log('\nLatest Commit:   No commits found.');
+  }
+  
+  console.log(cyan('────────────────────────────────────────────────────────'));
+  return ExitCodes.SUCCESS;
+}
+
+/**
+ * Handles the 'deps' command.
+ */
+function handleDependencyList(resolvedPath, options) {
+  const snapshot = scanRepo(resolvedPath, options);
+  const deps = snapshot.dependencies || {};
+  const useColor = !options.noColor && !process.env.NO_COLOR && (process.env.FORCE_COLOR !== undefined || process.stdout.isTTY);
+  
+  const bold = (str) => useColor ? `\x1b[1m${str}\x1b[0m` : str;
+  const cyan = (str) => useColor ? `\x1b[36m${str}\x1b[0m` : str;
+  const yellow = (str) => useColor ? `\x1b[33m${str}\x1b[0m` : str;
+
+  if (options.json) {
+    console.log(JSON.stringify({
+      repository: snapshot.project.name,
+      dependencies: deps
+    }, null, 2));
+    return ExitCodes.SUCCESS;
+  }
+
+  console.log(bold('\nDependency List'));
+  console.log(cyan('────────────────────────────────────────────────────────'));
+  console.log(`Repository:      ${bold(snapshot.project.name)}`);
+  
+  if (deps.error) {
+    console.log(`Error:           ${yellow(deps.error)}`);
+    console.log(cyan('────────────────────────────────────────────────────────'));
+    return ExitCodes.SUCCESS;
+  }
+
+  if (!snapshot.files.hasPackageJson) {
+    console.log(`Status:          ${yellow('No package.json file found (Not a Node.js project)')}`);
+    console.log(cyan('────────────────────────────────────────────────────────'));
+    return ExitCodes.SUCCESS;
+  }
+
+  console.log(bold('\nDependencies (Runtime):'));
+  renderDependencyTree(deps.dependencies || {});
+
+  console.log(bold('\nDevDependencies (Development):'));
+  renderDependencyTree(deps.devDependencies || {});
+
+  if (deps.peerDependencies && Object.keys(deps.peerDependencies).length > 0) {
+    console.log(bold('\nPeerDependencies:'));
+    renderDependencyTree(deps.peerDependencies);
+  }
+
+  if (deps.optionalDependencies && Object.keys(deps.optionalDependencies).length > 0) {
+    console.log(bold('\nOptionalDependencies:'));
+    renderDependencyTree(deps.optionalDependencies);
+  }
+
+  console.log(cyan('────────────────────────────────────────────────────────'));
+  return ExitCodes.SUCCESS;
+}
+
+/**
+ * Handles the 'export' command.
+ */
+function handleExportReport(resolvedPath, options) {
+  const snapshot = scanRepo(resolvedPath, options);
+  const findings = analyze(snapshot);
+  const result = doctor(findings, snapshot);
+  
+  // Format report without ANSI escape sequences
+  const reportText = formatResult(result, { ...options, noColor: true });
+  const exportFile = path.join(resolvedPath, 'repodoctor-report.md');
+
+  try {
+    fs.writeFileSync(exportFile, reportText, 'utf8');
+  } catch (err) {
+    throw new Error(`Failed to write export file: ${err.message}`);
+  }
+
+  if (options.json) {
+    console.log(JSON.stringify({
+      success: true,
+      exportedPath: exportFile
+    }, null, 2));
+  } else {
+    console.log(`\n✓ Diagnostic health report successfully saved to:`);
+    console.log(`  ${exportFile}`);
   }
 
   return ExitCodes.SUCCESS;

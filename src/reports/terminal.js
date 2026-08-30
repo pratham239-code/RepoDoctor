@@ -340,9 +340,44 @@ export class TerminalReportRenderer extends ReportRenderer {
 
     for (const entry of sorted) {
       const { finding, diagnosis, recommendation } = entry;
-      const bc = this.getBorderChar(finding.severity, useColor);
+      const borders = getCardBorders(finding.severity, useColor);
       const badge = this.severityLabel(finding.severity, useColor);
       const title = finding.title || finding.id || 'Untitled finding';
+
+      lines.push(borders.top);
+
+      // Header: [BADGE] Title
+      const headerText = `${badge} ${bold(title)}`;
+      lines.push(borders.left + this.padText(headerText, 64) + borders.right);
+
+      lines.push(borders.middle);
+
+      // Metadata: Category & Location
+      const catText = `${dim('Category:')} ${finding.category || 'N/A'}`;
+      lines.push(borders.left + this.padText(catText, 64) + borders.right);
+
+      if (finding.location?.file) {
+        const displayLoc = finding.location.file + (finding.location.path ? ` → ${finding.location.path}` : '');
+        const locText = `${dim('Location:')} ${displayLoc}`;
+        lines.push(borders.left + this.padText(locText, 64) + borders.right);
+      }
+
+      lines.push(borders.middle);
+
+      // Problem & Why
+      lines.push(borders.left + this.padText(bold('Problem:'), 64) + borders.right);
+      const probLines = wrapTextToLines(finding.description || diagnosis.problem, 64);
+      for (const pl of probLines) {
+        lines.push(borders.left + this.padText(pl, 64) + borders.right);
+      }
+
+      lines.push(borders.left + this.padText('', 64) + borders.right); // spacer line
+
+      lines.push(borders.left + this.padText(bold('Why:'), 64) + borders.right);
+      const whyLines = wrapTextToLines(diagnosis.why, 64);
+      for (const wl of whyLines) {
+        lines.push(borders.left + this.padText(wl, 64) + borders.right);
+      }
 
       // Format Duplicate Dependencies Table if present
       let depTable = '';
@@ -352,39 +387,35 @@ export class TerminalReportRenderer extends ReportRenderer {
           ['dependencies', finding.evidence.dependenciesVersion || 'N/A'],
           ['devDependencies', finding.evidence.devDependenciesVersion || 'N/A']
         ];
-        const tableStr = this.formatTable(depHeaders, depRows, useColor);
-        depTable = tableStr.split('\n').map(line => `  ${bc}   ${line}`).join('\n');
+        depTable = this.formatTable(depHeaders, depRows, useColor);
       } else if (finding.id === 'duplicate-peer-dependency' && finding.evidence?.dependency) {
         const depHeaders = ['Section', 'Version'];
         const depRows = [
           ['dependencies', finding.evidence.dependenciesVersion || 'N/A'],
           ['peerDependencies', finding.evidence.peerDependenciesVersion || 'N/A']
         ];
-        const tableStr = this.formatTable(depHeaders, depRows, useColor);
-        depTable = tableStr.split('\n').map(line => `  ${bc}   ${line}`).join('\n');
+        depTable = this.formatTable(depHeaders, depRows, useColor);
       }
-
-      lines.push(`  ${bc} ${badge} ${bold(title)}`);
-      lines.push(this.formatMetadata('Category:', finding.category || 'N/A', 60, `  ${bc} `));
-
-      if (finding.location?.file) {
-        const displayLoc = finding.location.file + (finding.location.path ? ` → ${finding.location.path}` : '');
-        lines.push(this.formatMetadata('Location:', displayLoc, 60, `  ${bc} `));
-      }
-
-      lines.push(`  ${bc}`);
-      lines.push(`  ${bc} ${bold('Why:')}`);
-      lines.push(this.wrapText(diagnosis.why, 72, `  ${bc}   `));
 
       if (depTable) {
-        lines.push(`  ${bc}`);
-        lines.push(depTable);
+        lines.push(borders.left + this.padText('', 64) + borders.right);
+        const tblLines = depTable.split('\n');
+        for (const tl of tblLines) {
+          lines.push(borders.left + this.padText('  ' + tl, 64) + borders.right);
+        }
       }
 
-      lines.push(`  ${bc}`);
-      lines.push(`  ${bc} ${bold('Recommendation:')}`);
-      lines.push(this.wrapText(recommendation, 72, `  ${bc}   `));
-      lines.push('');
+      lines.push(borders.middle);
+
+      // Recommendation
+      lines.push(borders.left + this.padText(bold('Recommendation:'), 64) + borders.right);
+      const recLines = wrapTextToLines(recommendation, 64);
+      for (const rl of recLines) {
+        lines.push(borders.left + this.padText(rl, 64) + borders.right);
+      }
+
+      lines.push(borders.bottom);
+      lines.push(''); // spacer between cards
     }
 
     // --- PRIORITY ACTIONS ---
@@ -412,4 +443,61 @@ export class TerminalReportRenderer extends ReportRenderer {
 
     return lines.join('\n');
   }
+}
+
+/**
+ * Word-wraps text into an array of lines matching the given width constraint.
+ */
+function wrapTextToLines(text, width) {
+  const paragraphs = String(text).split('\n');
+  const resultLines = [];
+  
+  for (const p of paragraphs) {
+    if (p.trim() === '') {
+      resultLines.push('');
+      continue;
+    }
+    
+    const words = p.split(/\s+/);
+    let currentLine = '';
+    
+    for (const word of words) {
+      if (!word) continue;
+      if (!currentLine) {
+        currentLine = word;
+      } else if ((currentLine + ' ' + word).length <= width) {
+        currentLine += ' ' + word;
+      } else {
+        resultLines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) {
+      resultLines.push(currentLine);
+    }
+  }
+  return resultLines;
+}
+
+/**
+ * Generates Unicode box borders styled with severity-based colors.
+ */
+function getCardBorders(severity, useColor) {
+  const colorMap = {
+    critical: '\x1b[31m',
+    error: '\x1b[31m',
+    warning: '\x1b[33m',
+    info: '\x1b[36m',
+    default: '\x1b[37m'
+  };
+  const color = useColor ? (colorMap[severity] || colorMap.default) : '';
+  const reset = useColor ? '\x1b[0m' : '';
+
+  return {
+    top: `${color}╭──────────────────────────────────────────────────────────────────╮${reset}`,
+    middle: `${color}├──────────────────────────────────────────────────────────────────┤${reset}`,
+    bottom: `${color}╰──────────────────────────────────────────────────────────────────╯${reset}`,
+    left: `${color}│${reset} `,
+    right: ` ${color}│${reset}`
+  };
 }

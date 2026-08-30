@@ -1,0 +1,10 @@
+.git
+node_modules
+tests
+repodoctor
+repodoctor.cmd
+Dockerfile
+.dockerignore
+walkthrough.md
+task.md
+implementation_plan.md

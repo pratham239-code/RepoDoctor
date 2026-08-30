@@ -44,7 +44,7 @@ export function parseArgs(args) {
   let command = null;
   let path = null;
   
-  const knownCommands = ['scan', 'check', 'doctor'];
+  const knownCommands = ['scan', 'check', 'doctor', 'stats', 'git', 'deps', 'export'];
   
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];

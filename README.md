@@ -57,42 +57,79 @@ RepoDoctor automates checking for these issues locally and immediately, without 
 
 ## How to Run RepoDoctor
 
-RepoDoctor is executable using Node.js directly or via platform launchers.
+RepoDoctor can be executed in four different ways depending on your workflow.
 
-### Direct Node Invocation
+### 1. Interactive TUI Dashboard (Looping Shell)
+Running RepoDoctor launcher without arguments in a terminal launches the interactive dashboard:
 ```bash
-node src/main.js [options] [command] [path]
-```
+# On Unix-like systems (Linux, macOS):
+./repodoctor
 
-### Windows Launcher
-```powershell
-.\repodoctor.cmd [options] [command] [path]
+# On Windows (Command Prompt or PowerShell):
+.\repodoctor
 ```
+*   **Path Selection**: It prompts you to enter or paste a target directory path.
+*   **Menu Options**: Choose options from `1` to `8` to run checks, display stats, change target paths (`[7]`), or exit (`[8]`).
+*   **Loop**: After running any check, press **Enter** to return to the main dashboard menu.
 
-### Unix-like Shell Launcher
+### 2. Direct CLI Command Invocation
+You can execute specific commands directly by passing options, command name, and target path:
 ```bash
+# On Unix-like systems (Linux, macOS):
 ./repodoctor [options] [command] [path]
+
+# On Windows (Command Prompt or PowerShell):
+.\repodoctor [options] [command] [path]
+```
+For example, to run a direct stats checkup on a folder:
+```bash
+./repodoctor stats D:\zerodependency\RepoDoctor
 ```
 
-*Note: You may need to grant execution permissions to the shell script first using `chmod +x repodoctor`.*
+### 3. Global Command Invocation
+To use `repodoctor` as a global command in any directory on your computer, run:
+```bash
+npm link
+```
+Once linked, you can launch the interactive menu or run CLI commands from any folder:
+```powershell
+repodoctor
+repodoctor doctor D:\path\to\project
+```
+
+### 4. Running inside Docker Containers
+You can build and run RepoDoctor isolated inside a lightweight container:
+*   **Build the image**:
+    ```bash
+    docker build -t repodoctor .
+    ```
+*   **Run the container**:
+    ```bash
+    docker run -it -v "D:\my-web-app:/repo" repodoctor
+    ```
+    *(Type `/repo` inside the prompt to run diagnostics on your mounted directory).*
 
 ---
 
 ## Available Commands
 
-- **`scan`**: Traverses the targeted path to collect facts, returning a raw `RepositorySnapshot` JSON structure.
-- **`check`**: Runs diagnostic rules on the collected snapshot facts and prints any issues in JSON array format.
-- **`doctor`**: Compiles a human-readable diagnostics report detailing severity, categories, why findings matter, and specific recommendation guides.
-- **`(default)`**: Runs the default entry dispatcher if no command is specified (e.g. `repodoctor .`).
+*   **`doctor`**: Compiles a structured, card-based diagnostics report detailing severity, problem, why it matters, and actionable recommendations.
+*   **`scan`**: Traverses the targeted path and returns the raw `RepositorySnapshot` JSON object.
+*   **`check`**: Evaluates the snapshot against health checks and prints the raw findings array in JSON format.
+*   **`stats`**: Prints directory stats (file/folder count, size) and a breakdown of file extensions.
+*   **`git`**: Conducts a local Git workspace audit (branch name, uncommitted changes, latest commit).
+*   **`deps`**: Renders a formatted dependency ASCII tree from `package.json`.
+*   **`export`**: Performs a doctor checkup, strips color codes, and exports the report as `repodoctor-report.md`.
+*   **`(default)`**: Runs the default checkup (`doctor`) if no command arguments are specified (e.g. `repodoctor .`).
 
 ---
 
 ## Available Options
 
-- **`-h, --help`**: Shows help documentation and exits with code `0`.
-- **`-v, --version`**: Shows the application version and exits with code `0`.
-- **`--verbose`**: Outputs detailed processing details and full error stack traces on failures.
-- **`-j, --json`**: Outputs findings in structured JSON format (supported on the `doctor` command).
+*   **`-h, --help`**: Shows help documentation and exits with code `0`.
+*   **`-v, --version`**: Shows the application version and exits with code `0`.
+*   **`--verbose`**: Outputs detailed processing details and full error stack traces on failures.
+*   **`-j, --json`**: Outputs findings in structured JSON format (supported on the `doctor` command).
 
 ---
 
@@ -100,7 +137,7 @@ node src/main.js [options] [command] [path]
 
 ### 1. Doctor Command (Standard Human-Readable Format)
 ```bash
-node src/main.js doctor .
+./repodoctor doctor .
 ```
 
 **Output:**
@@ -136,7 +173,7 @@ Review the uncommitted changes in the working directory. Either commit relevant 
 
 ### 2. Doctor Command with JSON Output
 ```bash
-node src/main.js doctor --json .
+./repodoctor doctor --json .
 ```
 
 **Output:**
