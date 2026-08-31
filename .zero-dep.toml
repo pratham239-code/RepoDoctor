@@ -1,0 +1,2 @@
+track = "A"
+pitch = "Zero-dependency repository health CLI: scans local repos for structural issues, duplicate dependencies, and missing configs using only the Node.js standard library."

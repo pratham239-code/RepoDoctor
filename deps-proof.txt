@@ -1,0 +1,70 @@
+RepoDoctor — Zero-Dependency Proof
+===================================
+Generated: 2026-08-31T11:13:00Z
+Node.js version: see `node --version`
+
+------------------------------------------------------------
+1. PACKAGE.JSON (complete file — no dependencies fields)
+------------------------------------------------------------
+
+{
+  "name": "repodoctor",
+  "version": "1.0.0",
+  "description": "Zero-dependency repository health and diagnostics CLI",
+  "type": "module",
+  "bin": {
+    "repodoctor": "./src/main.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}
+
+Findings:
+  dependencies      — FIELD ABSENT (0 packages)
+  devDependencies   — FIELD ABSENT (0 packages)
+  peerDependencies  — FIELD ABSENT (0 packages)
+  optionalDependencies — FIELD ABSENT (0 packages)
+
+Runtime dep count:  0
+Dev dep count:      0
+
+------------------------------------------------------------
+2. THIRD-PARTY IMPORT SCAN (src/ and tests/)
+------------------------------------------------------------
+Command: node check_imports.mjs   [scans every .js file for non-relative,
+                                   non-node: import statements]
+
+Output:
+  RESULT: 0 third-party imports found in src/ and tests/
+
+All imports either:
+  a) use the node: protocol  (e.g. import fs from 'node:fs')
+  b) are relative local paths (e.g. import { parseArgs } from './cli/parser.js')
+
+No third-party package is imported anywhere in the project.
+
+------------------------------------------------------------
+3. NODE_MODULES DIRECTORY
+------------------------------------------------------------
+node_modules/ does not exist in the repository.
+No packages have ever been installed via npm install.
+`npm install` is not required to run or test this project.
+
+------------------------------------------------------------
+4. RUNNABLE WITHOUT INSTALL
+------------------------------------------------------------
+Run command:  node src/main.js [command] [path]
+Test command: node --test
+
+Both commands work immediately after `git clone` with no install step.
+
+------------------------------------------------------------
+VERDICT
+------------------------------------------------------------
+Runtime dependencies:         0
+Development dependencies:     0
+Third-party runtime imports:  0
+Third-party test imports:     0
+node_modules present:         NO
+npm install required:         NO
